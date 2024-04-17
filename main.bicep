@@ -21,6 +21,8 @@ param adminPasswordOrKey string
 @secure()
 param sapbitVmAdminPassword string
 
+
+
 module suseIpList 'modules/deploymentscript/suse.bicep' = {
   name: 'suseIpList'
   params: {
@@ -49,4 +51,7 @@ module virtualMachine 'modules/compute/vmAcssSetup.bicep' = {
     sapbitVmAdminUserName: sapbitVmAdminUserName
     sapbitVmAdminPassword: sapbitVmAdminPassword
   }
+  dependsOn: [
+    virtualNetwork
+  ]
 }

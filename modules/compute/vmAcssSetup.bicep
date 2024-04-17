@@ -17,6 +17,15 @@ param sapbitVmAdminPassword string
 param adminPasswordOrKey string
 
 // paramters for this module
+@description('The role definition id for contributor role')
+param contributorRoleDefinitionId string = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+
+@description('The name of the user assigned identity that is created for the deployment script')
+var userAssignedIdentityName = 'sapBitsIdentity'
+
+@description('The name of the role assignment')
+var roleAssignmentName = guid(resourceGroup().id, 'contributorForSAPBits')
+
 @description('The name of your Virtual Machine.')
 param vmName string = 'VM-SAPBitsDownloader'
 
@@ -43,17 +52,6 @@ param securityType string = 'TrustedLaunch'
   'password'
 ])
 param authenticationType string = 'password'
-
-// identity for virtual machine
-@description('The role definition id for the blob contributor role')
-var contributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-
-@description('The name of the user assigned identity that is created for the deployment script')
-var userAssignedIdentityName = 'sapbitsDownloaderIdentity'
-
-@description('The name of the role assignment')
-var roleAssignmentName = guid(resourceGroup().id, 'contributor')
-
 
 
 var imageReference = {
@@ -87,6 +85,21 @@ var securityProfileJson = {
   securityType: securityType
 }
 
+resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: userAssignedIdentityName
+  location: location
+}
+
+resource roleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: roleAssignmentName
+  properties: {
+    principalId: userAssignedIdentity.properties.principalId
+    roleDefinitionId: contributorRoleDefinitionId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+
 resource networkInterface 'Microsoft.Network/networkInterfaces@2023-09-01' = {
   name: networkInterfaceName
   location: location
@@ -98,7 +111,8 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2023-09-01' = {
           subnet: {
             id: subnetSAPBitsId
           }
-          privateIPAllocationMethod: 'Dynamic'
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: '10.0.1.4'
           publicIPAddress: {
             id: publicIPAddress.id
           }
@@ -115,25 +129,12 @@ resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
     name: 'Standard'
   }
   properties: {
-    publicIPAllocationMethod: 'Dynamic'
+    publicIPAllocationMethod: 'Static'
     publicIPAddressVersion: 'IPv4'
     idleTimeoutInMinutes: 4
   }
 }
 
-resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: userAssignedIdentityName
-  location: location
-}
-
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: roleAssignmentName
-  properties: {
-    principalId: userAssignedIdentity.properties.principalId
-    roleDefinitionId: contributorRoleDefinitionId
-    principalType: 'ServicePrincipal'
-  }
-}
 
 resource virtualMachine 'Microsoft.Compute/virtualMachines@2023-09-01' = {
   name: vmName
@@ -172,4 +173,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2023-09-01' = {
     }
     securityProfile:  (securityType == 'TrustedLaunch') ? securityProfileJson : null
   }
+  // dependsOn: [
+  //   roleAssignment2
+  // ]
 }
