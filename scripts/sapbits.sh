@@ -26,7 +26,6 @@ git checkout main
 
 
 # ACSS supports the following SAP versions only: S/4HANA 1909 SPS 03, S/4HANA 2020 SPS 03, S/4HANA 2021 ISS 00
-# contaner Base Path is like <https://sapbits10.blob.core.windows.net/sapbits>
 
 export bom_base_name="S41909SPS03_v0011ms"
 export s_user=
